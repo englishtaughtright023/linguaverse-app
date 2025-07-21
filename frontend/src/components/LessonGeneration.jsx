@@ -18,8 +18,8 @@ function LessonGeneration() {
     setLesson(null);
 
     try {
-      // The backend server will run on port 3001
-      const response = await axios.post('http://localhost:3001/api/generate', {
+      // This URL now points to your public Codespace address
+      const response = await axios.post('https://probable-dollop-779x77grw79cxqvv-3001.app.github.dev/api/generate', {
         topic,
         proficiency,
       });
