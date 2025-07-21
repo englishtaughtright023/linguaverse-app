@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-function LessonGeneration() {
+// The component now accepts the saveLesson function as a prop
+function LessonGeneration({ saveLesson }) {
   const [topic, setTopic] = useState('');
   const [proficiency, setProficiency] = useState('Beginner');
   const [lesson, setLesson] = useState(null);
@@ -18,12 +19,13 @@ function LessonGeneration() {
     setLesson(null);
 
     try {
-      // This URL now points to your public Codespace address
+      // --- CORRECTED: Use the public Codespace URL ---
       const response = await axios.post('https://probable-dollop-779x77grw79cxqvv-3001.app.github.dev/api/generate', {
         topic,
         proficiency,
       });
-      setLesson(response.data);
+      // Add the topic to the lesson object before setting it
+      setLesson({ ...response.data, topic });
     } catch (err) {
       setError('Failed to generate lesson. Please check the backend server.');
       console.error(err);
@@ -56,7 +58,7 @@ function LessonGeneration() {
 
       {lesson && (
         <div className="lesson">
-          <h3>Lesson: {topic}</h3>
+          <h3>Lesson: {lesson.topic}</h3>
           <div className="lesson-section">
             <h4>Explanation</h4>
             <p>{lesson.explanation}</p>
@@ -75,6 +77,11 @@ function LessonGeneration() {
             <h4>Grammar</h4>
             <p><strong>Rule:</strong> {lesson.grammar.rule}</p>
             <p><strong>Example:</strong> "{lesson.grammar.example}"</p>
+          </div>
+          <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <button onClick={() => saveLesson(lesson)}>
+              Save Lesson to Library
+            </button>
           </div>
         </div>
       )}

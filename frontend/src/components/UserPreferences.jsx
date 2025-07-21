@@ -1,10 +1,17 @@
 import React from 'react';
 
-function UserPreferences() {
+function UserPreferences({ theme, toggleTheme }) {
   return (
     <div>
       <h2>User Preferences</h2>
-      <p>This component will be built in a future step.</p>
+      <div className="lesson-section">
+        <h4>Appearance</h4>
+        <p>Current Mode: {theme === 'light' ? 'Light ☀️' : 'Dark 🌙'}</p>
+        <button onClick={toggleTheme}>
+          Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
+        </button>
+      </div>
+      {/* Future preference sections will be added here */}
     </div>
   );
 }
