@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { MongoClient, ServerApiVersion } from 'mongodb';
+import { MongoClient, ServerApiVersion, ObjectId } from 'mongodb';
 import OpenAI from 'openai';
 
 dotenv.config();
@@ -87,7 +87,7 @@ app.post('/api/generate', async (req, res) => {
     });
 
     const text = completion.choices[0].message.content;
-    const lessonJson = JSON.parse(text); // OpenAI's JSON mode is reliable, direct parse is fine
+    const lessonJson = JSON.parse(text); 
     res.json(lessonJson);
 
   } catch (error) {

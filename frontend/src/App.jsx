@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios'; // We need axios for API calls
+import axios from 'axios';
 import './App.css';
 import LessonGeneration from './components/LessonGeneration.jsx';
 import Library from './components/Library.jsx';
 import UserPreferences from './components/UserPreferences.jsx';
 
-// Define the base URL for your backend API
 const API_BASE_URL = 'https://probable-dollop-779x77grw79cxqvv-3001.app.github.dev';
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('LessonGeneration');
-  const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme || 'light';
-  });
-
-  // --- START: New Database-Driven Lesson State ---
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [fromLanguage, setFromLanguage] = useState(() => localStorage.getItem('fromLanguage') || 'English');
+  const [toLanguage, setToLanguage] = useState(() => localStorage.getItem('toLanguage') || 'Spanish');
+  const [proficiency, setProficiency] = useState(() => localStorage.getItem('proficiency') || 'Beginner');
   const [savedLessons, setSavedLessons] = useState([]);
+  
+  // --- NEW: State for managing selected lessons for deletion ---
+  const [selectedLessons, setSelectedLessons] = useState([]);
 
-  // Function to fetch all lessons from the database
   const fetchLessons = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/lessons`);
@@ -28,46 +27,44 @@ function App() {
     }
   };
 
-  // useEffect to fetch lessons when the app first loads
   useEffect(() => {
     fetchLessons();
-  }, []); // The empty dependency array ensures this runs only once on mount
+  }, []);
+  
+  // Effects to save preferences
+  useEffect(() => { localStorage.setItem('theme', theme); document.body.className = theme === 'dark' ? 'dark-theme' : ''; }, [theme]);
+  useEffect(() => { localStorage.setItem('fromLanguage', fromLanguage); }, [fromLanguage]);
+  useEffect(() => { localStorage.setItem('toLanguage', toLanguage); }, [toLanguage]);
+  useEffect(() => { localStorage.setItem('proficiency', proficiency); }, [proficiency]);
 
-  // Function to save a new lesson to the database
   const saveLesson = async (lessonToSave) => {
     try {
       await axios.post(`${API_BASE_URL}/api/lessons`, lessonToSave);
-      // After saving, re-fetch all lessons to update the library with the new data
       await fetchLessons();
-      // Navigate to the library to show the user it was saved
       setActiveComponent('Library'); 
     } catch (error) {
       console.error("Failed to save lesson:", error);
     }
   };
-  // --- END: New Database-Driven Lesson State ---
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
+  
+  const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
 
   const renderComponent = () => {
     switch (activeComponent) {
       case 'LessonGeneration':
         return <LessonGeneration saveLesson={saveLesson} />;
       case 'Library':
-        return <Library savedLessons={savedLessons} />;
+        // Pass down selection state and management functions
+        return (
+          <Library
+            savedLessons={savedLessons}
+            fetchLessons={fetchLessons}
+            selectedLessons={selectedLessons}
+            setSelectedLessons={setSelectedLessons}
+          />
+        );
       case 'UserPreferences':
-        return <UserPreferences theme={theme} toggleTheme={toggleTheme} />;
+        return ( <UserPreferences theme={theme} toggleTheme={toggleTheme} fromLanguage={fromLanguage} setFromLanguage={setFromLanguage} toLanguage={toLanguage} setToLanguage={setToLanguage} proficiency={proficiency} setProficiency={setProficiency} /> );
       default:
         return <LessonGeneration />;
     }
