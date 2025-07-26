@@ -1,87 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './App.css';
-import LessonGeneration from './components/LessonGeneration.jsx';
-import Library from './components/Library.jsx';
+import CreativeStudio from './components/CreativeStudio.jsx';
+import LessonView from './components/LessonView.jsx';
 import UserPreferences from './components/UserPreferences.jsx';
+import './App.css';
 
+// ==================================================================
+// CORRECTION: Using the public Forwarded Address for the backend
+// ==================================================================
 const API_BASE_URL = 'https://probable-dollop-779x77grw79cxqvv-3001.app.github.dev';
 
 function App() {
-  const [activeComponent, setActiveComponent] = useState('LessonGeneration');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
-  const [fromLanguage, setFromLanguage] = useState(() => localStorage.getItem('fromLanguage') || 'English');
-  const [toLanguage, setToLanguage] = useState(() => localStorage.getItem('toLanguage') || 'Spanish');
-  const [proficiency, setProficiency] = useState(() => localStorage.getItem('proficiency') || 'Beginner');
-  const [savedLessons, setSavedLessons] = useState([]);
-  
-  // --- NEW: State for managing selected lessons for deletion ---
-  const [selectedLessons, setSelectedLessons] = useState([]);
-
-  const fetchLessons = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/lessons`);
-      setSavedLessons(response.data);
-    } catch (error) {
-      console.error("Failed to fetch lessons:", error);
-    }
-  };
+  const [view, setView] = useState('studio');
+  const [currentLesson, setCurrentLesson] = useState(null);
+  const [userTokens, setUserTokens] = useState(100);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [proficiency, setProficiency] = useState(() => localStorage.getItem('proficiency') || 'Intermediate');
 
   useEffect(() => {
-    fetchLessons();
-  }, []);
-  
-  // Effects to save preferences
-  useEffect(() => { localStorage.setItem('theme', theme); document.body.className = theme === 'dark' ? 'dark-theme' : ''; }, [theme]);
-  useEffect(() => { localStorage.setItem('fromLanguage', fromLanguage); }, [fromLanguage]);
-  useEffect(() => { localStorage.setItem('toLanguage', toLanguage); }, [toLanguage]);
-  useEffect(() => { localStorage.setItem('proficiency', proficiency); }, [proficiency]);
-
-  const saveLesson = async (lessonToSave) => {
-    try {
-      await axios.post(`${API_BASE_URL}/api/lessons`, lessonToSave);
-      await fetchLessons();
-      setActiveComponent('Library'); 
-    } catch (error) {
-      console.error("Failed to save lesson:", error);
+    document.body.className = '';
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
     }
-  };
-  
-  const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  }, [theme]);
 
-  const renderComponent = () => {
-    switch (activeComponent) {
-      case 'LessonGeneration':
-        return <LessonGeneration saveLesson={saveLesson} />;
-      case 'Library':
-        // Pass down selection state and management functions
-        return (
-          <Library
-            savedLessons={savedLessons}
-            fetchLessons={fetchLessons}
-            selectedLessons={selectedLessons}
-            setSelectedLessons={setSelectedLessons}
-          />
-        );
-      case 'UserPreferences':
-        return ( <UserPreferences theme={theme} toggleTheme={toggleTheme} fromLanguage={fromLanguage} setFromLanguage={setFromLanguage} toLanguage={toLanguage} setToLanguage={setToLanguage} proficiency={proficiency} setProficiency={setProficiency} /> );
+  const viewLesson = (lesson) => {
+    setCurrentLesson(lesson);
+    setView('lesson');
+  };
+
+  const returnToStudio = () => {
+    setCurrentLesson(null);
+    setView('studio');
+  };
+
+  const renderView = () => {
+    switch (view) {
+      case 'lesson':
+        return <LessonView lesson={currentLesson} returnToStudio={returnToStudio} />;
+      case 'preferences':
+        return <UserPreferences />;
+      case 'studio':
       default:
-        return <LessonGeneration />;
+        return <CreativeStudio viewLesson={viewLesson} userTokens={userTokens} setUserTokens={setUserTokens} API_BASE_URL={API_BASE_URL} />;
     }
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Linguaverse</h1>
-        <nav>
-          <button onClick={() => setActiveComponent('LessonGeneration')}>Lesson Generation</button>
-          <button onClick={() => setActiveComponent('Library')}>Library</button>
-          <button onClick={() => setActiveComponent('UserPreferences')}>User Preferences</button>
+    <div className="app-container">
+      <header className="app-header">
+        <h1 className="header-title">LINGUAVERSE</h1>
+        <nav className="header-nav">
+          <button onClick={returnToStudio} disabled={view === 'studio'}>Creative Studio</button>
+          <button onClick={() => setView('preferences')} disabled={view === 'preferences'}>Preferences</button>
         </nav>
+        <div className="token-display">
+          TOKENS: {userTokens}
+        </div>
       </header>
-      <main>
-        {renderComponent()}
+      <main className="main-content">
+        {renderView()}
       </main>
     </div>
   );
