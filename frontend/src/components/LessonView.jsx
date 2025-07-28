@@ -92,4 +92,4 @@ function LessonView({ lesson, returnToStudio }) {
   );
 }
 
-export default LessonView;
+export default LessonView;  
