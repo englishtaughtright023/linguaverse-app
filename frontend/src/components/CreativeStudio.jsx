@@ -1,32 +1,32 @@
-// -----------------------------------------------------------------------------
-// FILE: frontend/src/components/CreativeStudio.jsx (CORRECTED)
-// -----------------------------------------------------------------------------
-// This version corrects the API endpoint for fetching the gallery.
-// -----------------------------------------------------------------------------
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import GalleryGrid from './GalleryGrid.jsx'; // Import our reusable grid
 
 function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL }) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [gallery, setGallery] = useState([]);
+  
+  // State specifically for the gallery preview on this page
+  const [recentLessons, setRecentLessons] = useState([]);
+  const [isGalleryLoading, setIsGalleryLoading] = useState(false);
 
+  // Fetch the gallery data when the component mounts
   useEffect(() => {
-    const fetchGallery = async () => {
-      setIsLoading(true);
+    const fetchRecentLessons = async () => {
+      setIsGalleryLoading(true);
       try {
-        // CORRECTED: The endpoint is /api/lessons, not /api/lessons/all
-        const response = await axios.get(`${API_BASE_URL}/api/lessons`); 
-        setGallery(response.data);
+        const response = await axios.get(`${API_BASE_URL}/api/lessons`);
+        // We only want to show a preview, e.g., the 6 most recent
+        setRecentLessons(response.data.slice(0, 6)); 
       } catch (err) {
-        console.error("Failed to fetch gallery:", err);
-        setError("Could not connect to the lesson database. Is the backend server running?");
+        console.error("Failed to fetch recent lessons:", err);
+        // We don't set the main error state here, to avoid confusion
       } finally {
-        setIsLoading(false);
+        setIsGalleryLoading(false);
       }
     };
-    fetchGallery(); 
+    fetchRecentLessons(); 
   }, [API_BASE_URL]);
 
   const handleGenerate = async () => {
@@ -50,7 +50,11 @@ function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL })
       });
       
       const newLesson = response.data;
-      setGallery(prevGallery => [newLesson, ...prevGallery]);
+      
+      // CRITICAL: Update the local gallery state instantly
+      setRecentLessons(prevLessons => [newLesson, ...prevLessons].slice(0, 6));
+      
+      // Navigate to the full lesson view
       viewLesson(newLesson);
 
     } catch (err) {
@@ -78,18 +82,13 @@ function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL })
       </div>
       {error && <p className="error-message">{error}</p>}
       
-      <div className="gallery-container">
-        <h2>My Creations</h2>
-        {isLoading && gallery.length === 0 && <p>Loading gallery...</p>}
-        <div className="gallery-grid">
-          {gallery.length === 0 && !isLoading && <p>Your generated lessons will appear here.</p>}
-          {gallery.map((lesson) => (
-            <div key={lesson._id} className="gallery-item" onClick={() => viewLesson(lesson)}>
-              <img src={lesson.heroImageUrl} alt={lesson.title} onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/600x400/0d0d1a/e0e0e0?text=Preview'; }}/>
-              <div className="gallery-item-title">{lesson.title}</div>
-            </div>
-          ))}
-        </div>
+      {/* --- RECENT CREATIONS GALLERY PREVIEW --- */}
+      <div className="gallery-preview-container">
+        <h2 className="gallery-title">Recent Creations</h2>
+        {isGalleryLoading && <p>Loading recent work...</p>}
+        {!isGalleryLoading && (
+          <GalleryGrid lessons={recentLessons} onViewLesson={viewLesson} />
+        )}
       </div>
     </div>
   );

@@ -1,58 +1,51 @@
-// -----------------------------------------------------------------------------
-// FILE: frontend/src/components/UserPreferences.jsx (Final Refit)
-// -----------------------------------------------------------------------------
-// This version has been updated to use the new CSS class for centering
-// and to be a self-contained component for now.
-// -----------------------------------------------------------------------------
 import React from 'react';
 
-function UserPreferences() {
-  // Mock data for now - this would be hooked into App.jsx state later
-  const theme = 'dark';
-  const toggleTheme = () => console.log("Toggle theme");
-  const fromLanguage = 'English';
-  const toLanguage = 'Spanish';
-  const proficiency = 'Intermediate';
+// The component now receives props from App.jsx to be fully functional
+function UserPreferences({
+  theme,
+  setTheme,
+  proficiency,
+  setProficiency
+}) {
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+
+  const handleProficiencyChange = (e) => {
+    const newProficiency = e.target.value;
+    setProficiency(newProficiency);
+    localStorage.setItem('proficiency', newProficiency);
+  }
 
   return (
-    <div className="preferences-view">
-      <h2>User Preferences</h2>
+    <div className="preferences-container">
+      <h2 className="gallery-title">User Preferences</h2>
       
-      <div className="preferences-content">
-        <div className="lesson-section">
-          <h4>Language Settings</h4>
-          <label>
-            Your primary language:
-            <select value={fromLanguage} onChange={() => {}}>
-              <option value="English">English</option>
-              <option value="Spanish">Spanish</option>
-            </select>
-          </label>
-          <label>
-            Language you want to learn:
-            <select value={toLanguage} onChange={() => {}}>
-              <option value="Spanish">Spanish</option>
-              <option value="English">English</option>
-            </select>
-          </label>
+      <div className="preferences-section">
+        <h4 className="preferences-header">Proficiency</h4>
+        <div className="preferences-row">
+          <label htmlFor="proficiency-select">Your current proficiency level:</label>
+          <select 
+            id="proficiency-select" 
+            className="preferences-select"
+            value={proficiency} 
+            onChange={handleProficiencyChange}
+          >
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
         </div>
+      </div>
 
-        <div className="lesson-section">
-          <h4>Proficiency</h4>
-          <label>
-            Your current proficiency level:
-            <select value={proficiency} onChange={() => {}}>
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="lesson-section">
-          <h4>Appearance</h4>
-          <p>Current Mode: {theme === 'light' ? 'Light ☀️' : 'Dark 🌙'}</p>
-          <button onClick={toggleTheme}>
+      <div className="preferences-section">
+        <h4 className="preferences-header">Appearance</h4>
+        <div className="preferences-row">
+          <span>Current Mode: {theme === 'light' ? 'Light ☀️' : 'Dark 🌙'}</span>
+          <button className="preferences-button" onClick={toggleTheme}>
             Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
           </button>
         </div>
