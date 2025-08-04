@@ -1,31 +1,52 @@
-// -----------------------------------------------------------------------------
-// FILE: backend/database.js (Database Connection)
-// -----------------------------------------------------------------------------
-// This file handles our connection to MongoDB Atlas. It is now a separate module.
-// -----------------------------------------------------------------------------
-import { MongoClient, ServerApiVersion } from 'mongodb';
+/**
+ * =============================================================================
+ * LINGUAVERSE - DATABASE SERVICE (FINAL REPAIR)
+ * =============================================================================
+ * File: /backend/database.js
+ * * Update: The service now explicitly selects the database by name using a
+ * new DB_NAME environment variable, removing ambiguity from the connection.
+ * =============================================================================
+ */
 
-const uri = process.env.MONGO_URI;
-if (!uri) {
-  console.error("MONGO_URI not found in .env file. Server cannot start.");
-  process.exit(1);
-}
-
-const client = new MongoClient(uri, {
-  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
-});
+import { MongoClient } from 'mongodb';
 
 let db;
 
 export async function connectToDatabase() {
+  const uri = process.env.MONGO_URI;
+  // --- THIS IS THE REPAIR ---
+  // We get the database name from a dedicated environment variable.
+  const dbName = process.env.DB_NAME;
+
+  if (!uri) {
+    console.error('CRITICAL ERROR: MONGO_URI not found. Check your .env file.');
+    process.exit(1);
+  }
+  // Add a check for the new variable.
+  if (!dbName) {
+    console.error('CRITICAL ERROR: DB_NAME not found. Please add it to your .env file.');
+    process.exit(1);
+  }
+  // --- END REPAIR ---
+
+  const client = new MongoClient(uri);
+
   try {
     await client.connect();
-    console.log("Successfully connected to MongoDB Atlas!");
-    db = client.db("linguaverse");
-  } catch (err) {
-    console.error("Failed to connect to MongoDB", err);
+    // --- THIS IS THE REPAIR ---
+    // We now explicitly select the database by name.
+    db = client.db(dbName); 
+    // --- END REPAIR ---
+    console.log(`Successfully connected to MongoDB Atlas! Database: ${dbName}`);
+  } catch (error) {
+    console.error('Failed to connect to MongoDB Atlas:', error);
     process.exit(1);
   }
 }
 
-export const getDb = () => db;
+export function getDb() {
+  if (!db) {
+    throw new Error('Database not initialized. Call connectToDatabase first.');
+  }
+  return db;
+}

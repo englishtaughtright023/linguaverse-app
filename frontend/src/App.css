@@ -352,3 +352,108 @@
   color: #00ffff;
   flex-shrink: 0; /* Prevents speaker name from wrapping */
 }
+
+/* --- MY CREATIONS EXPANSION STYLES --- */
+.search-bar-container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  background-color: #101010;
+  border: 1px solid #555;
+  border-radius: 5px;
+  color: #e0e0e0;
+  box-sizing: border-box;
+}
+
+.current-lesson-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.current-lesson-header {
+  color: #00ffff; /* Cyan */
+  font-size: 1.2rem;
+  margin: 0;
+  text-align: center;
+}
+
+.gallery-grid-single-item {
+  display: flex;
+  justify-content: center;
+}
+
+.gallery-item.current {
+  border-color: #f0f; /* Magenta border to highlight */
+  max-width: 300px; /* Constrain size */
+}
+
+.library-divider {
+  width: 100%;
+  border: none;
+  border-top: 1px solid #444;
+  margin-top: 2rem;
+}
+
+/* --- LESSON DECK (TABS) STYLES --- */
+.lesson-tabs {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid #333;
+}
+
+.lesson-tab {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  background-color: transparent;
+  color: #aaa;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s;
+}
+
+.lesson-tab:hover {
+  color: #00ffff;
+}
+
+.lesson-tab.active {
+  color: #f0f;
+  border-bottom-color: #f0f;
+}
+
+.lesson-tab-content {
+  width: 100%;
+  padding-top: 2rem;
+}
+
+.tab-content-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.tab-content-writing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.lesson-chapter-image {
+  max-width: 400px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #333;
+}

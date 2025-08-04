@@ -1,22 +1,15 @@
 import OpenAI from 'openai';
 
-// Initialize the OpenAI client with the API key from your .env file
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-/**
- * Generates the main, structured lesson text by calling the OpenAI API.
- * @param {string} topic - The user-selected topic.
- * @param {string} proficiency - The user's proficiency level.
- * @returns {object} A structured JSON object containing the lesson text.
- */
 export async function generateLessonText(topic, proficiency = 'Intermediate') {
   console.log(`Generating LIVE lesson text via OpenAI for topic: "${topic}"`);
 
-  // The prompt structure is slightly different for OpenAI
   const systemPrompt = `You are an expert language teacher and a creative writer. Your task is to create a cohesive, multi-part language lesson. You must respond with a single, valid JSON object and nothing else.`;
 
+  // The heroImagePrompt has been removed. We will derive the image from the situation.
   const userPrompt = `
     Create a lesson for an ${proficiency} English learner on the topic: "${topic}".
     The JSON object must have the following structure:
@@ -29,19 +22,17 @@ export async function generateLessonText(topic, proficiency = 'Intermediate') {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Using the specified model
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      response_format: { type: "json_object" }, // Instruct OpenAI to return valid JSON
+      response_format: { type: "json_object" },
     });
 
     const jsonString = response.choices[0].message.content;
-    
     console.log("OpenAI Response received, parsing JSON...");
     const lessonData = JSON.parse(jsonString);
-    
     return lessonData;
 
   } catch (error) {

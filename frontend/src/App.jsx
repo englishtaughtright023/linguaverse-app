@@ -28,7 +28,9 @@ function App() {
   };
 
   const returnToStudio = () => {
-    setView('studio');
+    // When returning from a lesson, we set the view to 'creations'
+    // This makes the workflow more intuitive.
+    setView('creations');
   };
 
   const renderView = () => {
@@ -36,7 +38,6 @@ function App() {
       case 'lesson':
         return <LessonView lesson={currentLesson} returnToStudio={returnToStudio} />;
       case 'preferences':
-        // Pass down the necessary state and setters as props
         return <UserPreferences 
                   theme={theme}
                   setTheme={setTheme}
@@ -44,7 +45,12 @@ function App() {
                   setProficiency={setProficiency}
                />;
       case 'creations':
-        return <MyCreations viewLesson={viewLesson} API_BASE_URL={API_BASE_URL} />;
+        // --- PASSING 'currentLesson' PROP ---
+        return <MyCreations 
+                  viewLesson={viewLesson} 
+                  API_BASE_URL={API_BASE_URL} 
+                  currentLesson={currentLesson} 
+               />;
       case 'studio':
       default:
         return <CreativeStudio viewLesson={viewLesson} userTokens={userTokens} setUserTokens={setUserTokens} API_BASE_URL={API_BASE_URL} proficiency={proficiency} />;

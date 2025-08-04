@@ -1,68 +1,87 @@
-// -----------------------------------------------------------------------------
-// FILE: backend/services/lessonService.js (The Factory Foreman)
-// -----------------------------------------------------------------------------
-// This service orchestrates the entire lesson generation process by calling
-// the other specialized services in the correct order.
-// -----------------------------------------------------------------------------
-import { generateLessonText } from './textService.js';
-import { generateHeroImage, generateChapterImage, generateDetailImage } from './imageService.js';
-
 /**
- * Generates a complete, multi-layered lesson package.
- * @param {string} topic - The user-selected topic.
- * @param {string} proficiency - The user's proficiency level.
- * @returns {object} The final, complete lesson object.
+ * =============================================================================
+ * LINGUAVERSE - LESSON SERVICE (GENRE-AWARE)
+ * =============================================================================
+ * File /services/lessonService.js
+ * * Mission: To implement the final, most sophisticated layer of our strategy:
+ * genre-aware model routing. The Model Director is now intelligent.
+ * =============================================================================
  */
-export async function generateFullLesson(topic, proficiency = 'Intermediate') {
-  console.log(`--- Initiating full lesson generation for topic: ${topic} ---`);
 
-  // --- STEP 1: Generate all textual content ---
-  const lessonTextData = await generateLessonText(topic, proficiency);
-  
-  // --- STEP 2: Generate all visual assets in parallel ---
-  // This is more efficient than doing them one by one.
-  
-  // 2a: Generate the Tier 1 Hero Image based on the explanation
-  const heroImagePromise = generateHeroImage(lessonTextData.explanation);
-  
-  // 2b: Generate the Tier 2 Chapter Image (for now, we'll base it on the title)
-  const chapterImagePromise = generateChapterImage(`A book cover illustration for a story titled '${lessonTextData.title}'`);
+import { generateHeroImage } from './imageService.js';
+import { generateEnhancedPrompt } from './ImaginationConduit.js';
+import { generateLessonText } from './textService.js';
+import { modelPortfolio } from '../config/modelPortfolio.js';
 
-  // 2c: Generate Tier 3 Detail Images for each vocabulary word
-  const detailImagePromises = lessonTextData.vocabulary.map(vocabItem => 
-    generateDetailImage(vocabItem.word)
-  );
+export async function generateFullLesson(options) {
+  try {
+    const { topic, proficiency = 'Intermediate', modelId } = options;
+    
+    // --- THIS IS THE FINAL UPGRADE ---
+    // 1. The conduit now returns an object with the prompt and the genre.
+    const { enhancedPrompt, genre } = await generateEnhancedPrompt(topic);
+    // --- END FINAL UPGRADE ---
 
-  // Wait for all image generation promises to resolve
-  const [
-    heroImageUrl,
-    chapterImageUrl,
-    ...detailImageUrls
-  ] = await Promise.all([
-    heroImagePromise,
-    chapterImagePromise,
-    ...detailImagePromises
-  ]);
+    let selectedModel;
 
-  // --- STEP 3: Assemble the final lesson object ---
-  
-  // Add the generated detail image URLs back into the vocabulary objects
-  const vocabularyWithImages = lessonTextData.vocabulary.map((vocabItem, index) => ({
-    ...vocabItem,
-    imageUrl: detailImageUrls[index]
-  }));
+    if (modelId) {
+      // User override remains the highest priority.
+      selectedModel = modelPortfolio.find(m => m.modelId === modelId);
+      if (!selectedModel) throw new Error(`Invalid modelId: ${modelId}`);
+      console.log(`[User Override]: Using selected model "${selectedModel.name}"`);
+    } else {
+      // --- THIS IS THE FINAL UPGRADE: INTELLIGENT ROUTING ---
+      // 2. Filter the portfolio to find models that specialize in the identified genre.
+      let candidateModels = modelPortfolio.filter(m => m.genres.includes(genre));
 
-  const finalLesson = {
-    topic: topic,
-    proficiency: proficiency,
-    createdAt: new Date(),
-    ...lessonTextData, // Spread in title, explanation, grammar, dialogue
-    vocabulary: vocabularyWithImages, // Use the new vocabulary array with image URLs
-    heroImageUrl: heroImageUrl,
-    chapterImageUrl: chapterImageUrl,
-    // We will add the interactive components (audio, etc.) later
-  };
+      // 3. If no specialist is found, fall back to all active models.
+      if (candidateModels.length === 0) {
+        console.log(`[Model Director]: No specialist found for genre "${genre}". Falling back to all active models.`);
+        candidateModels = modelPortfolio.filter(m => m.weight > 0);
+      }
+      if (candidateModels.length === 0) {
+        throw new Error("No active models available in the portfolio.");
+      }
 
-  console.log(`--- Full lesson generation for topic: ${topic} complete. ---`);
-  return finalLesson;
+      // 4. Perform a weighted random selection FROM THE CANDIDATE LIST.
+      const totalWeight = candidateModels.reduce((sum, model) => sum + model.weight, 0);
+      let random = Math.random() * totalWeight;
+      for (const model of candidateModels) {
+        if (random < model.weight) {
+          selectedModel = model;
+          break;
+        }
+        random -= model.weight;
+      }
+      if (!selectedModel) selectedModel = candidateModels[0]; // Fallback
+      console.log(`[Model Director]: Genre is "${genre}". Selected specialist: "${selectedModel.name}"`);
+      // --- END FINAL UPGRADE ---
+    }
+    
+    console.log(`--- Initiating lesson for topic: ${topic} with model: ${selectedModel.name} ---`);
+
+    // The rest of the system now uses the intelligently selected model.
+    const lessonTextData = await generateLessonText(enhancedPrompt, proficiency); 
+    const heroImageUrl = await generateHeroImage(enhancedPrompt, selectedModel.modelId, { steps: selectedModel.steps });
+    
+    const finalLesson = {
+      topic: topic,
+      modelUsed: selectedModel.name,
+      promptUsed: enhancedPrompt,
+      heroImageUrl: heroImageUrl,
+      title: lessonTextData.title,
+      situation: lessonTextData.situation,
+      vocabulary: lessonTextData.vocabulary,
+      grammar: lessonTextData.grammar,
+      dialogue: lessonTextData.dialogue,
+      createdAt: new Date(),
+    };
+
+    console.log(`--- Lesson generation for topic: ${topic} complete. ---`);
+    return finalLesson;
+
+  } catch (error) {
+    console.error('[Lesson Service Error]: Failed to generate full lesson.', error);
+    throw error; 
+  }
 }

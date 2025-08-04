@@ -1,80 +1,111 @@
-import fetch from 'node-fetch';
+/**
+ * =============================================================================
+ * LINGUAVERSE - IMAGE SERVICE (FINAL - SYNCHRONOUS)
+ * =============================================================================
+ * File: /services/imageService.js
+ * * Mission: To generate an image by making a single, direct API call to the
+ * Runware service and parsing the immediate response.
+ *
+ * Update: All asynchronous polling logic has been removed, as the API returns
+ * the image URL directly for this model. This is the final and correct version.
+ * =============================================================================
+ */
+
 import crypto from 'crypto';
 
-const RUNWARE_API_URL = 'https://api.runware.ai/v1/images/generations';
-const RUNWARE_API_KEY = process.env.RUNWARE_API_KEY;
-const standardNegativePrompt = "cartoon, anime, painting, text, watermark, logos, ugly, deformed, blurry, generic, boring, celebrity, real person, likeness, modern objects, anachronism, clock, electricity";
-const RUNWARE_MODEL_ID = 'runware:101@1';
-
-async function generateImage(payload) {
-  if (!RUNWARE_API_KEY) {
-    console.error("RUNWARE_API_KEY not found in .env file.");
-    return "https://placehold.co/600x400/282c34/ffffff?text=API+Key+Missing";
+/**
+ * The core image generation function.
+ * @param {string} prompt - The detailed prompt for the image.
+ * @param {string} modelId - The ID of the model to use (e.g., 'runware:101@1').
+ * @param {object} [params={}] - Other parameters like negative_prompt, seed, etc.
+ * @returns {Promise<string>} A promise that resolves to the REAL generated image URL.
+ */
+async function generateImage(prompt, modelId, params = {}) {
+  // Input validation.
+  if (typeof modelId !== 'string' || !modelId) {
+    console.error(`[Image Service]: CRITICAL ERROR - Invalid modelId received. Defaulting to a safe model.`);
+    modelId = 'sdxl:101'; 
   }
+
+  console.log(`[Image Service]: Initiating LIVE image generation with model: ${modelId}`);
+
+  const payload = {
+    model: modelId,
+    taskType: 'imageInference',
+    taskUUID: crypto.randomUUID(), 
+    positivePrompt: prompt,
+    width: 1024,
+    height: 512,
+    ...params
+  };
+  delete payload.steps;
+
+  const baseArchitecture = modelId.split(':')[0].toLowerCase();
+  
+  if (baseArchitecture !== 'imagen3') {
+    payload.steps = (params && params.steps) ? params.steps : 30;
+  }
+  
   try {
-    const response = await fetch(RUNWARE_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RUNWARE_API_KEY}` },
-      body: JSON.stringify([payload])
-    });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Runware API error: ${response.statusText} - ${errorBody}`);
+    console.log('[Image Service]: Sending final payload to Runware API:', payload);
+
+    const apiKey = process.env.RUNWARE_API_KEY;
+    if (!apiKey) {
+      throw new Error("RUNWARE_API_KEY is not defined in the environment variables.");
     }
-    const data = await response.json();
+
+    const endpointURL = `https://api.runware.ai/v1/models/${modelId}/generate`;
     
-    // =======================================================================
-    // FINAL CORRECTION: The API response uses the key 'imageURL', not 'url'.
-    // =======================================================================
-    return data.data[0].imageURL; 
+    const response = await fetch(endpointURL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify([payload]) 
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Runware API Error Response:', errorData);
+      throw new Error(`Runware API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    // --- THIS IS THE CORRECTION ---
+    // We parse the direct response, as no polling is needed.
+    const imageUrl = result.data[0]?.imageURL;
+
+    if (!imageUrl) {
+        console.error("[Image Service]: API response did not contain an imageURL.", result);
+        throw new Error("API response was successful but did not contain an imageURL.");
+    }
+    
+    console.log(`[Image Service]: LIVE image generated successfully. URL: ${imageUrl}`);
+    return imageUrl;
 
   } catch (error) {
-    console.error("Failed to generate image:", error);
-    return "https://placehold.co/600x400/282c34/ffffff?text=Image+Failed"; 
+    console.error('Failed to generate live image:', error.message);
+    throw error;
   }
 }
 
-export async function generateHeroImage(narrativePrompt) {
-  console.log("Generating Tier 1 Hero Image...");
-  const payload = {
-    taskUUID: crypto.randomUUID(),
-    taskType: 'imageInference',
-    model: RUNWARE_MODEL_ID, 
-    positivePrompt: `${narrativePrompt}, cinematic, hyperrealistic, dramatic lighting, 8k, ${standardNegativePrompt}`,
-    n: 1,
-    width: 1024,
-    height: 576,
-    steps: 50
-  };
-  return await generateImage(payload);
+
+// --- EXPORTED FUNCTIONS ---
+// No changes are needed here.
+
+async function generateHeroImage(prompt, modelId) {
+    console.log("[Image Service]: Generating HERO image.");
+    const params = {
+        negative_prompt: "blurry, low quality, text, watermark, signature",
+        seed: Math.floor(Math.random() * 1000000),
+        steps: 50
+    };
+    return generateImage(prompt, modelId, params);
 }
 
-export async function generateChapterImage(narrativePrompt) {
-  console.log("Generating Tier 2 Chapter Image...");
-  const payload = {
-    taskUUID: crypto.randomUUID(),
-    taskType: 'imageInference',
-    model: RUNWARE_MODEL_ID,
-    positivePrompt: `${narrativePrompt}, book cover art, vertical composition, ${standardNegativePrompt}`,
-    n: 1,
-    width: 512,
-    height: 768,
-    steps: 50
-  };
-  return await generateImage(payload);
-}
-
-export async function generateDetailImage(objectPrompt) {
-  console.log(`Generating Tier 3 Detail Image for: ${objectPrompt}`);
-  const payload = {
-    taskUUID: crypto.randomUUID(),
-    taskType: 'imageInference',
-    model: RUNWARE_MODEL_ID,
-    positivePrompt: `photo of a single ${objectPrompt} on a clean, white background, studio lighting`,
-    n: 1,
-    width: 1024,
-    height: 1024,
-    steps: 50
-  };
-  return await generateImage(payload);
-}
+export { 
+    generateImage, 
+    generateHeroImage
+};
