@@ -1,27 +1,25 @@
 /**
  * =============================================================================
- * LINGUAVERSE - IMAGINATION CONDUIT V6 (NARRATIVE DIVERSITY)
+ * LINGUAVERSE - IMAGINATION CONDUIT V10 (CONSTRAINT REFINEMENT)
  * =============================================================================
  * File: /services/ImaginationConduit.js
- * * Mission: To explicitly command the text-generation AI to create a unique
- * character and situation for every request, ensuring true narrative diversity
- * and preventing thematic repetition.
+ * * Mission: To correct the "constraint bleed" issue by replacing the
+ * * overly specific creative constraints with a more thematically neutral set,
+ * * ensuring the random element enhances, rather than overrides, the user's topic.
  * =============================================================================
  */
 
-// Local helper function for calling the text generation AI
+// Helper function for all OpenAI API calls
 async function callTextGenerationAI(prompt, expectJson = false) {
-  console.log(`[Conduit V6]: Calling LIVE Text Generation AI. Expecting JSON: ${expectJson}`);
+  console.log(`[Conduit V10]: Calling OpenAI API. Expecting JSON: ${expectJson}`);
   
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not defined in the environment variables.");
-  }
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not defined.");
 
   const payload = {
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.9, // Slightly increased temperature for more creativity
+    temperature: 1.0,
   };
 
   if (expectJson) {
@@ -47,66 +45,110 @@ async function callTextGenerationAI(prompt, expectJson = false) {
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    if (expectJson) {
-      return JSON.parse(content);
-    } else {
-      return content.trim();
-    }
+    return expectJson ? JSON.parse(content) : content.trim();
 
   } catch (error) {
     console.error("Failed during live AI call:", error);
-    if (expectJson) {
-      return { style: "Error", scene: "AI call failed.", vocabulary: [] };
-    }
-    return "A lone adventurer discovers a hidden waterfall.";
+    throw error;
   }
 }
 
-// STAGE 1: Genre Analysis
-async function getGenre(userInput) {
-  console.log(`[Conduit V6]: Stage 1 - Analyzing genre for "${userInput}"`);
-  const cacheBuster = `(Seed: ${Math.random()})`;
-  const genrePrompt = `Analyze the following user prompt and classify it into one of these genres: "sci-fi", "fantasy", "historical", "modern", "nature". Respond with only the single genre name. Prompt: "${userInput}" ${cacheBuster}`;
+// STAGE 1: Topic Classification (Unchanged)
+async function classifyTopic(userInput) {
+  console.log(`[Conduit V10]: Stage 1 - Classifying topic: "${userInput}"`);
+  const classificationPrompt = `
+    Analyze the user's topic and classify it into ONE of the following five categories:
+    "thematic", "grammatical", "abstract", "copyright", "unknown".
+    Respond with ONLY the single category name in lowercase.
+    Topic: "${userInput}"
+  `;
   
   try {
-    const genre = await callTextGenerationAI(genrePrompt, false);
-    console.log(`[Conduit V6]: Genre identified: "${genre}"`);
-    return genre.toLowerCase().replace(/[^a-z-]/g, '');
+    const category = await callTextGenerationAI(classificationPrompt);
+    console.log(`[Conduit V10]: Topic classified as: "${category}"`);
+    return category.replace(/[^a-z]/g, '');
   } catch (error) {
-    console.error('[Conduit V6]: Failed to identify genre.', error);
-    return "modern";
+    console.error('[Conduit V10]: Failed to classify topic. Defaulting to "thematic".', error);
+    return "thematic";
   }
 }
 
-// STAGE 2: Final Prompt Generation
-async function generateEnhancedPrompt(userInput) {
-  const genre = await getGenre(userInput);
-  const cacheBuster = `(Random Seed: ${Math.random()})`;
+// STAGE 2: Protocol-Specific Prompt Generation
+async function generatePromptFromClassification(userInput, category) {
+    console.log(`[Conduit V10]: Stage 2 - Engaging protocol for "${category}"`);
+    let metaPrompt = '';
 
-  // --- THIS IS THE REPAIR ---
-  // The meta-prompt now includes a forceful, explicit instruction for
-  // the AI to generate a unique character and situation every time.
-  const metaPrompt = `
-    You are an expert prompt engineer for an AI image generator.
-    Your task is to expand the user's simple concept into a detailed, structured prompt.
-    The user's concept is: "${userInput}".
-    The identified genre is: "${genre}".
+    // --- THIS IS THE UPGRADE: The constraints are now thematically neutral. ---
+    const creativeConstraints = [
+        "The scene must be viewed from a low angle, looking up.",
+        "The main character must be a reluctant hero.",
+        "The lighting must be dramatic, with strong contrasts between light and shadow (chiaroscuro).",
+        "The scene must take place at dawn, with a sense of new beginnings.",
+        "The central character must be a wise mentor figure.",
+        "The composition must use a strong sense of symmetry.",
+        "The mood must be one of quiet contemplation.",
+        "The scene must be depicted in a minimalist style, focusing on only a few key elements."
+    ];
+    const randomConstraint = creativeConstraints[Math.floor(Math.random() * creativeConstraints.length)];
 
-    CRITICAL INSTRUCTION: For every request, you MUST invent a COMPLETELY NEW and UNIQUE character and situation. Do NOT repeat characters or scenes. For example, if the concept is "ancient japan," avoid defaulting to a lone samurai. Instead, you could create a scene about a female calligrapher in a tranquil garden, a bustling fish market at dawn, a group of monks tending to a temple, or a noble courtier composing poetry. BE CREATIVE AND ENSURE NARRATIVE DIVERSITY.
+    const baseInstructions = `
+        You are an expert prompt engineer. Your primary task is to create a detailed, structured prompt for an AI image generator.
+        The final output must be a single, valid JSON object with keys "style", "scene", and "vocabulary" (a list of 10 nouns). Do not include any preamble.
+    `;
 
-    Generate a prompt with the following structure:
-    - "Style": A short, creative description of the artistic style.
-    - "Scene": A one-sentence description of the main scene and the UNIQUE central character you invented.
-    - "Vocabulary": A list of exactly 10 specific, visually distinct nouns or short noun phrases related to the UNIQUE scene.
+    const diversityInstruction = `
+        To ensure creativity, you MUST invent a new and unique situation. Do NOT simply depict the subject in a default or common setting.
+        Additionally, you MUST incorporate the following creative constraint into your scene: "${randomConstraint}"
+    `;
 
-    The final output must be a single, valid JSON object with the keys "style", "scene", and "vocabulary".
-    Do not include any preamble. ${cacheBuster}
-  `;
-  // --- END REPAIR ---
+    switch (category) {
+        case 'grammatical':
+            metaPrompt = `
+                ${baseInstructions}
+                The user's topic is the grammatical concept: "${userInput}".
+                Your task is to invent a scene that PERFECTLY DEMONSTRATES this grammatical rule.
+                ${diversityInstruction}
+            `;
+            break;
+        
+        case 'abstract':
+            metaPrompt = `
+                ${baseInstructions}
+                The user's topic is the abstract concept: "${userInput}".
+                Your task is to invent a scene that SYMBOLIZES this concept.
+                ${diversityInstruction}
+            `;
+            break;
 
+        case 'copyright':
+            throw new Error(`Copyrighted Topic: "${userInput}" cannot be used for lesson generation.`);
+
+        case 'thematic':
+        case 'unknown':
+        default:
+            metaPrompt = `
+                ${baseInstructions}
+                The user's topic is: "${userInput}".
+                Your task is to create a scene based on this topic. The subject of the scene MUST be "${userInput}".
+                ${diversityInstruction}
+            `;
+            break;
+    }
+
+    return await callTextGenerationAI(metaPrompt, true);
+}
+
+
+// MAIN EXPORTED FUNCTION (Unchanged)
+async function analyzeAndGeneratePrompt(userInput) {
   try {
-    console.log('[Conduit V6]: Stage 2 - Generating final structured prompt.');
-    const structuredPromptData = await callTextGenerationAI(metaPrompt, true);
+    const category = await classifyTopic(userInput);
+
+    if (category === 'copyright') {
+        throw new Error(`Copyrighted material ("${userInput}") is not permitted.`);
+    }
+
+    const structuredPromptData = await generatePromptFromClassification(userInput, category);
 
     const finalPromptString = [
       `Style: ${structuredPromptData.style}`,
@@ -114,15 +156,17 @@ async function generateEnhancedPrompt(userInput) {
       ...structuredPromptData.vocabulary
     ].join('\n');
     
+    const genre = (category === 'thematic' || category === 'unknown') ? 'modern' : category;
+
     return {
       enhancedPrompt: finalPromptString,
-      genre: genre
+      genre: genre 
     };
 
   } catch (error) {
-    console.error('[Conduit V6]: Critical failure during final prompt generation.', error);
-    throw new Error('Failed to generate final prompt via Imagination Conduit.');
+    console.error('[Conduit V10]: Critical failure during prompt generation.', error);
+    throw error;
   }
 }
 
-export { generateEnhancedPrompt };
+export { analyzeAndGeneratePrompt };

@@ -27,10 +27,6 @@ function MyCreations({ viewLesson, API_BASE_URL, currentLesson }) {
 
   const filteredAndSortedLessons = useMemo(() => {
     return lessons
-      // =======================================================================
-      // CORRECTION: Added a check to ensure 'lesson' and 'lesson.title' exist
-      // before attempting to filter. This prevents the crash.
-      // =======================================================================
       .filter(lesson => 
         lesson && lesson.title && lesson.title.toLowerCase().includes(searchTerm.toLowerCase())
       )
@@ -55,7 +51,8 @@ function MyCreations({ viewLesson, API_BASE_URL, currentLesson }) {
         <div className="current-lesson-container">
           <h3 className="current-lesson-header">Currently Viewing</h3>
           <div className="gallery-grid-single-item">
-             <div className="gallery-item current" onClick={() => viewLesson(currentLesson)}>
+             {/* --- THIS LINE HAS BEEN MODIFIED --- */}
+             <div className="gallery-item current" onClick={() => viewLesson(currentLesson._id)}>
                 <img 
                   src={currentLesson.heroImageUrl} 
                   alt={currentLesson.title} 

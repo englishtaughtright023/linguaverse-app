@@ -22,14 +22,19 @@ function App() {
     }
   }, [theme]);
 
-  const viewLesson = (lesson) => {
-    setCurrentLesson(lesson);
-    setView('lesson');
+  // --- THIS FUNCTION HAS BEEN UPGRADED ---
+  const viewLesson = async (lessonId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/lessons/${lessonId}`);
+      setCurrentLesson(response.data);
+      setView('lesson');
+    } catch (error) {
+      console.error('Error fetching full lesson data:', error);
+      alert('Failed to load the lesson. Please try again.');
+    }
   };
 
   const returnToStudio = () => {
-    // When returning from a lesson, we set the view to 'creations'
-    // This makes the workflow more intuitive.
     setView('creations');
   };
 
@@ -45,7 +50,6 @@ function App() {
                   setProficiency={setProficiency}
                />;
       case 'creations':
-        // --- PASSING 'currentLesson' PROP ---
         return <MyCreations 
                   viewLesson={viewLesson} 
                   API_BASE_URL={API_BASE_URL} 
@@ -64,7 +68,7 @@ function App() {
         <div className="header-controls">
           <nav className="header-nav">
             <button onClick={() => setView('studio')} disabled={view === 'studio'}>Creative Studio</button>
-            <button onClick={() => setView('creations')} disabled={view === 'creations'}>My Creations</button>
+            <button onClick={() => setView('creations')} disabled={view ===- 'creations'}>My Creations</button>
             <button onClick={() => setView('preferences')} disabled={view === 'preferences'}>Preferences</button>
           </nav>
           <div className="token-display">

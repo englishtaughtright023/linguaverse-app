@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import GalleryGrid from './GalleryGrid.jsx';
-// --- THIS IS THE FINAL REPAIR ---
-// The direct import has been REMOVED. The component now fetches this data
-// from the backend via an API call.
-// --- END REPAIR ---
 
 function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL }) {
   const [prompt, setPrompt] = useState('');
@@ -13,18 +9,13 @@ function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL })
   
   const [selectedModelId, setSelectedModelId] = useState('automatic');
   
-  // --- THIS IS THE REPAIR ---
-  // New state to hold the models fetched from our new API endpoint.
   const [availableModels, setAvailableModels] = useState([]);
-  // --- END REPAIR ---
-
+  
   const [recentLessons, setRecentLessons] = useState([]);
   const [isGalleryLoading, setIsGalleryLoading] = useState(false);
 
-  // This useEffect now fetches both recent lessons AND the model portfolio.
   useEffect(() => {
     const fetchInitialData = async () => {
-      // Fetch recent lessons
       setIsGalleryLoading(true);
       try {
         const lessonsResponse = await axios.get(`${API_BASE_URL}/api/lessons`);
@@ -35,15 +26,12 @@ function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL })
         setIsGalleryLoading(false);
       }
 
-      // --- THIS IS THE REPAIR ---
-      // Fetch the available models from our new endpoint.
       try {
         const modelsResponse = await axios.get(`${API_BASE_URL}/api/portfolio/models`);
         setAvailableModels(modelsResponse.data);
       } catch (err) {
         console.error("Failed to fetch model portfolio:", err);
       }
-      // --- END REPAIR ---
     };
     fetchInitialData(); 
   }, [API_BASE_URL]);
@@ -73,11 +61,14 @@ function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL })
         payload.modelId = selectedModelId;
       }
 
-      const response = await axios.post(`${API_BASE_URL}/api/lessons/generate`, payload);
+      // --- THIS IS THE CORRECTION ---
+      // The URL has been changed from '/api/lessons/generate' to '/api/lessons'
+      const response = await axios.post(`${API_BASE_URL}/api/lessons`, payload);
+      // --- END CORRECTION ---
       
       const newLesson = response.data;
       setRecentLessons(prevLessons => [newLesson, ...prevLessons].slice(0, 6));
-      viewLesson(newLesson);
+      viewLesson(newLesson._id); // We now pass the ID to trigger a full data fetch
 
     } catch (err) {
       console.error("Lesson generation failed:", err);
@@ -107,7 +98,6 @@ function CreativeStudio({ viewLesson, userTokens, setUserTokens, API_BASE_URL })
                 disabled={isLoading}
             >
                 <option value="automatic">Automatic (Recommended)</option>
-                {/* The dropdown now maps over the 'availableModels' state */}
                 {availableModels.map(model => (
                     <option key={model.modelId} value={model.modelId}>
                         {model.name} (${model.cost})

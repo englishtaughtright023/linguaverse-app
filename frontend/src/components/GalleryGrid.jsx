@@ -8,7 +8,9 @@ function GalleryGrid({ lessons, onViewLesson }) {
   return (
     <div className="gallery-grid">
       {lessons.map((lesson) => (
-        <div key={lesson._id} className="gallery-item" onClick={() => onViewLesson(lesson)}>
+        // --- THIS IS THE FINAL CORRECTION ---
+        // We now pass lesson._id instead of the whole lesson object.
+        <div key={lesson._id} className="gallery-item" onClick={() => onViewLesson(lesson._id)}>
           <img 
             src={lesson.heroImageUrl} 
             alt={lesson.title} 

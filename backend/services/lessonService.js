@@ -1,15 +1,16 @@
 /**
  * =============================================================================
- * LINGUAVERSE - LESSON SERVICE (GENRE-AWARE)
+ * LINGUAVERSE - LESSON SERVICE (WEIGHT CORRECTION)
  * =============================================================================
  * File /services/lessonService.js
- * * Mission: To implement the final, most sophisticated layer of our strategy:
- * genre-aware model routing. The Model Director is now intelligent.
+ * * Mission: To correct the model selection logic to ensure that a model
+ * * with a weight of 0 is never selected, giving the Captain full manual
+ * * control over the active portfolio.
  * =============================================================================
  */
 
 import { generateHeroImage } from './imageService.js';
-import { generateEnhancedPrompt } from './ImaginationConduit.js';
+import { analyzeAndGeneratePrompt } from './ImaginationConduit.js';
 import { generateLessonText } from './textService.js';
 import { modelPortfolio } from '../config/modelPortfolio.js';
 
@@ -17,33 +18,32 @@ export async function generateFullLesson(options) {
   try {
     const { topic, proficiency = 'Intermediate', modelId } = options;
     
-    // --- THIS IS THE FINAL UPGRADE ---
-    // 1. The conduit now returns an object with the prompt and the genre.
-    const { enhancedPrompt, genre } = await generateEnhancedPrompt(topic);
-    // --- END FINAL UPGRADE ---
+    const { enhancedPrompt, genre } = await analyzeAndGeneratePrompt(topic);
 
     let selectedModel;
 
     if (modelId) {
-      // User override remains the highest priority.
       selectedModel = modelPortfolio.find(m => m.modelId === modelId);
       if (!selectedModel) throw new Error(`Invalid modelId: ${modelId}`);
       console.log(`[User Override]: Using selected model "${selectedModel.name}"`);
     } else {
-      // --- THIS IS THE FINAL UPGRADE: INTELLIGENT ROUTING ---
-      // 2. Filter the portfolio to find models that specialize in the identified genre.
-      let candidateModels = modelPortfolio.filter(m => m.genres.includes(genre));
-
-      // 3. If no specialist is found, fall back to all active models.
-      if (candidateModels.length === 0) {
-        console.log(`[Model Director]: No specialist found for genre "${genre}". Falling back to all active models.`);
-        candidateModels = modelPortfolio.filter(m => m.weight > 0);
-      }
-      if (candidateModels.length === 0) {
+      // --- THIS IS THE CORRECTION ---
+      // 1. First, filter the entire portfolio to only include active models.
+      const activeModels = modelPortfolio.filter(m => m.weight > 0);
+      if (activeModels.length === 0) {
         throw new Error("No active models available in the portfolio.");
       }
 
-      // 4. Perform a weighted random selection FROM THE CANDIDATE LIST.
+      // 2. Then, find specialists FROM THE ACTIVE LIST.
+      let candidateModels = activeModels.filter(m => m.genres.includes(genre));
+
+      // 3. If no specialist is found, fall back to ALL active models.
+      if (candidateModels.length === 0) {
+        console.log(`[Model Director]: No specialist found for genre "${genre}". Falling back to all active models.`);
+        candidateModels = activeModels;
+      }
+      // --- END CORRECTION ---
+
       const totalWeight = candidateModels.reduce((sum, model) => sum + model.weight, 0);
       let random = Math.random() * totalWeight;
       for (const model of candidateModels) {
@@ -53,14 +53,12 @@ export async function generateFullLesson(options) {
         }
         random -= model.weight;
       }
-      if (!selectedModel) selectedModel = candidateModels[0]; // Fallback
+      if (!selectedModel) selectedModel = candidateModels[0];
       console.log(`[Model Director]: Genre is "${genre}". Selected specialist: "${selectedModel.name}"`);
-      // --- END FINAL UPGRADE ---
     }
     
     console.log(`--- Initiating lesson for topic: ${topic} with model: ${selectedModel.name} ---`);
 
-    // The rest of the system now uses the intelligently selected model.
     const lessonTextData = await generateLessonText(enhancedPrompt, proficiency); 
     const heroImageUrl = await generateHeroImage(enhancedPrompt, selectedModel.modelId, { steps: selectedModel.steps });
     

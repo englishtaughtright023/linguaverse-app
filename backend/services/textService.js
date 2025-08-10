@@ -1,42 +1,68 @@
+// File: backend/services/textService.js
+
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function generateLessonText(topic, proficiency = 'Intermediate') {
-  console.log(`Generating LIVE lesson text via OpenAI for topic: "${topic}"`);
+export async function generateLessonText(enhancedPrompt, proficiency) {
+  console.log(`Generating LIVE lesson text via OpenAI for scene: "${enhancedPrompt.substring(0, 80)}..."`);
 
-  const systemPrompt = `You are an expert language teacher and a creative writer. Your task is to create a cohesive, multi-part language lesson. You must respond with a single, valid JSON object and nothing else.`;
+  // --- THIS IS THE UPGRADE: The prompt now forces more creativity ---
+  const systemPrompt = `
+    You are an expert language teacher creating a lesson based on a highly specific and unique scene description.
+    Your output MUST be a single, valid JSON object and nothing else.
+    The JSON object MUST strictly adhere to the following structure. Do NOT omit any fields.
 
-  // The heroImagePrompt has been removed. We will derive the image from the situation.
-  const userPrompt = `
-    Create a lesson for an ${proficiency} English learner on the topic: "${topic}".
-    The JSON object must have the following structure:
-    - "title": A creative and engaging title.
-    - "situation": A one-paragraph, first-person explanation ("Your Situation: ...").
-    - "vocabulary": An array of 5 objects, each with "word" and "translation" keys.
-    - "grammar": An object with "rule" and "example" keys.
-    - "dialogue": An array of 3-4 objects, each with "speaker" and "line" keys.
+    {
+      "title": "A creative, engaging title for the lesson that DIRECTLY relates to the unique scene provided.",
+      "situation": "A one-paragraph, vivid description of the scene, written in clear ${proficiency} level English. Do NOT just repeat the input; embellish it and make it engaging.",
+      "vocabulary": [
+        { "word": "string", "translation": "string", "explanation": "string" },
+        { "word": "string", "translation": "string", "explanation": "string" },
+        { "word": "string", "translation": "string", "explanation": "string" },
+        { "word": "string", "translation": "string", "explanation": "string" },
+        { "word": "string", "translation": "string", "explanation": "string" }
+      ],
+      "grammar": [
+        { "point": "A key grammar point that is directly observable or relevant to the action in the scene.", "explanation": "string", "example": "An example sentence using the grammar point, directly referencing elements from the scene." }
+      ],
+      "dialogue": [
+        { "speaker": "Character_A", "sentence": "A line of dialogue that would logically be spoken in this exact scene." },
+        { "speaker": "Character_B", "sentence": "A responding line of dialogue relevant to the unique situation." },
+        { "speaker": "Character_A", "sentence": "Another line of dialogue." },
+        { "speaker": "Character_B", "sentence": "A final line of dialogue." }
+      ]
+    }
+
+    CRITICAL INSTRUCTION: All generated content (title, situation, vocabulary, grammar, dialogue) MUST be directly inspired by the unique details of the user's scene description. Avoid generic or didactic content. Be creative and context-aware.
+    For the "translation" field, provide a plausible translation in Japanese.
   `;
+  // --- END UPGRADE ---
 
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+        { role: "user", content: `Here is the unique scene description: ${enhancedPrompt}` }
       ],
       response_format: { type: "json_object" },
     });
+    
+    const rawResponse = response.choices[0].message.content;
+    
+    console.log("--- RAW OPENAI RESPONSE ---");
+    console.log(rawResponse);
+    console.log("--------------------------");
 
-    const jsonString = response.choices[0].message.content;
     console.log("OpenAI Response received, parsing JSON...");
-    const lessonData = JSON.parse(jsonString);
+    const lessonData = JSON.parse(rawResponse);
     return lessonData;
 
   } catch (error) {
-    console.error("Error calling OpenAI API:", error);
-    throw new Error("Failed to generate lesson text from OpenAI service.");
+    console.error('Error generating lesson text from OpenAI:', error);
+    throw new Error('Failed to generate lesson text.');
   }
 }
